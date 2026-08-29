@@ -145,11 +145,13 @@ class PayMongoService
      */
     public static function methodTypesFor(string $ourMethod): array
     {
+        // Only QRPh is activated on our live PayMongo account. A QRPh page is
+        // payable from GCash, Maya and any InstaPay bank app, so it serves all
+        // of our cashless options. Restore the per-channel mapping below once
+        // GCash / Maya / online banking are approved in the dashboard.
         return match ($ourMethod) {
-            'gcash'         => ['gcash'],
-            'paymaya'       => ['paymaya'],
-            'bank_transfer' => ['dob', 'brankas'],
-            default         => [],
+            'gcash', 'paymaya', 'bank_transfer' => ['qrph'],
+            default                             => [],
         };
     }
 
