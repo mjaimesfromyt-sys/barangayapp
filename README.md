@@ -81,6 +81,62 @@ Run only one of them. Stop the other in its control panel, and disable its
 autostart so it does not reclaim the port on the next reboot. `php artisan
 db:show` then confirms which server and tables the app is really using.
 
+## Deploying to Hostinger from GitHub
+
+Pulling the repo is not enough on its own. Two things the app needs are
+deliberately not in git, and have to exist on the server:
+
+- **`vendor/`** — run `composer install --no-dev --optimize-autoloader`.
+- **`.env`** — create it on the server from `.env.example`, then
+  `php artisan key:generate`.
+
+Built front-end assets (`public/build`) *are* committed, because shared hosting
+has no Node. That means **`npm run build` runs on your machine, and the result
+gets committed**, before you deploy. If you change anything under `resources/`
+and skip that, the server serves the old bundle.
+
+Point the domain's document root at `public/`, not the project root.
+
+`.env` values that differ from local:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false               # never true in production: it prints
+                              # database credentials on the error page
+APP_URL=https://your-domain
+
+DB_HOST=localhost             # hPanel gives you the DB name, user, password
+DB_DATABASE=...
+DB_USERNAME=...
+DB_PASSWORD=...
+
+MAIL_MAILER=resend            # otherwise OTP emails only reach the log file
+RESEND_API_KEY=...
+
+PAYMONGO_SECRET_KEY=...
+PAYMONGO_PUBLIC_KEY=...
+```
+
+Then, on the server:
+
+```bash
+php artisan migrate --force
+php artisan storage:link
+php artisan config:clear
+```
+
+Mail and other non-database notification channels are queued
+(`App\Jobs\DeliverNotification`), and `QUEUE_CONNECTION=database`. Shared
+hosting has no long-running worker, so add a cron job or those jobs sit in the
+`jobs` table forever:
+
+```
+* * * * * cd /home/USER/domains/YOUR-DOMAIN/public_html && php artisan queue:work --stop-when-empty >> /dev/null 2>&1
+```
+
+In-app (database) notifications are sent synchronously and do not need the
+worker.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
