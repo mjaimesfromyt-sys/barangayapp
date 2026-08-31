@@ -7,6 +7,60 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Barangay San Jose — local setup
+
+The app runs on MySQL. `database/barangayapp.sql` is a schema + seed-data dump
+of that database.
+
+```bash
+composer install
+cp .env.example .env          # Windows: copy .env.example .env
+php artisan key:generate
+
+php artisan db:create         # creates the `barangayapp` database (utf8mb4_unicode_ci)
+php artisan migrate           # builds the tables
+php artisan db:seed           # admin account only (see DatabaseSeeder)
+
+npm install && npm run dev
+php artisan serve
+```
+
+`composer setup` runs the same steps in one go.
+
+Run `db:create` before the first `migrate`. Laravel will happily create a
+missing MySQL database on its own, but with the server's default collation;
+`db:create` uses the `utf8mb4_unicode_ci` that the dump and production use.
+
+`FacilitySeeder`, `EquipmentSeeder` and `TransactionTypeSeeder` are not part of
+`db:seed`; run them individually (`php artisan db:seed --class=FacilitySeeder`)
+if you want the sample catalog.
+
+To start from the committed dump instead of empty tables, import it and then
+migrate — the dump predates the most recent migrations, so `migrate` still has
+work to do:
+
+```bash
+mysql -u root -p < database/barangayapp.sql
+php artisan migrate
+```
+
+### "Unknown database 'barangayapp'"
+
+```
+SQLSTATE[HY000] [1049] Unknown database 'barangayapp'
+(Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: barangayapp,
+ SQL: select * from `sessions` where `id` = ...)
+```
+
+The MySQL server is reachable but has no `barangayapp` database, so every
+request fails — including the session lookup that runs before your own code.
+Run `php artisan db:create && php artisan migrate` to create it.
+
+If that reports a connection error rather than creating the database, the
+server itself is not reachable: start MySQL (XAMPP/Laragon control panel, or
+`brew services start mysql`) and check `DB_HOST`, `DB_PORT`, `DB_USERNAME` and
+`DB_PASSWORD` in `.env`. After editing `.env`, run `php artisan config:clear`.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
