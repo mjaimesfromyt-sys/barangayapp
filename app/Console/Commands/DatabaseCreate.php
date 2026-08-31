@@ -106,6 +106,8 @@ class DatabaseCreate extends Command
                 ($config['options'] ?? []) + [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
             );
 
+            $version = (string) $pdo->query('SELECT VERSION()')->fetchColumn();
+
             $existed = (bool) $pdo->query(
                 'SELECT 1 FROM information_schema.schemata WHERE schema_name = '.$pdo->quote($database)
             )->fetchColumn();
@@ -118,14 +120,33 @@ class DatabaseCreate extends Command
             return self::FAILURE;
         }
 
+        // Naming the server matters when more than one is installed: XAMPP and
+        // Laragon both want port 3306, and whichever started first wins. The
+        // version string tells them apart (MariaDB vs MySQL).
+        $this->line("Server: {$this->serverLabel($config)} ({$version})");
+
         if ($existed) {
-            $this->info("Database [{$database}] already exists.");
+            $this->info("Database [{$database}] already exists there.");
         } else {
-            $this->info("Created database [{$database}] ({$charset} / {$collation}).");
+            $this->info("Created database [{$database}] there ({$charset} / {$collation}).");
             $this->line('Next: php artisan migrate');
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Describe the server being contacted, for output.
+     */
+    private function serverLabel(array $config): string
+    {
+        if (! empty($config['unix_socket'])) {
+            return $config['unix_socket'];
+        }
+
+        $host = $config['host'] ?: '127.0.0.1';
+
+        return empty($config['port']) ? $host : "{$host}:{$config['port']}";
     }
 
     /**

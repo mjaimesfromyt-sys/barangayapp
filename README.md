@@ -61,6 +61,26 @@ server itself is not reachable: start MySQL (XAMPP/Laragon control panel, or
 `brew services start mysql`) and check `DB_HOST`, `DB_PORT`, `DB_USERNAME` and
 `DB_PASSWORD` in `.env`. After editing `.env`, run `php artisan config:clear`.
 
+### The database exists, but the app still says it doesn't
+
+Two MySQL servers cannot share port 3306, and on Windows it is easy to have
+both XAMPP and Laragon installed. Whichever starts first owns 3306; the other
+either fails silently or ends up on another port. The database you created in
+HeidiSQL then lives in one server while the app connects to the other, and the
+error looks identical to never having created it at all.
+
+`php artisan db:create` prints the server it reached, so you can tell which one
+answered:
+
+```
+Server: 127.0.0.1:3306 (10.11.14-MariaDB)   <- XAMPP
+Server: 127.0.0.1:3306 (8.4.3)              <- Laragon / standalone MySQL
+```
+
+Run only one of them. Stop the other in its control panel, and disable its
+autostart so it does not reclaim the port on the next reboot. `php artisan
+db:show` then confirms which server and tables the app is really using.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
